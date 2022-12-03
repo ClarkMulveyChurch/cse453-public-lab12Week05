@@ -2,7 +2,7 @@
 # COMPONENT:
 #    INTERACT
 # Author:
-#    Br. Helfrich, Kyle Mueller, <your name here if you made a change>
+#    Br. Helfrich, Kyle Mueller, Nate Duncan, Clark Mulvey
 # Summary: 
 #    This class allows one user to interact with the system
 ########################################################################
@@ -14,16 +14,18 @@ import messages, control
 # User has a name and a password
 ###############################################################
 class User:
-    def __init__(self, name, password):
+    def __init__(self, name, password, control):
         self.name = name
         self.password = password
+        self.control = control
+        
 
 userlist = [
-   [ "AdmiralAbe",     "password" ],  
-   [ "CaptainCharlie", "password" ], 
-   [ "SeamanSam",      "password" ],
-   [ "SeamanSue",      "password" ],
-   [ "SeamanSly",      "password" ]
+   [ "AdmiralAbe",     "password", control.Control.Secret ],  
+   [ "CaptainCharlie", "password", control.Control.Privileged  ], 
+   [ "SeamanSam",      "password", control.Control.Confidential ],
+   [ "SeamanSue",      "password", control.Control.Confidential ],
+   [ "SeamanSly",      "password", control.Control.Confidential ]
 ]
 
 ###############################################################
@@ -47,6 +49,7 @@ class Interact:
     def __init__(self, username, password, messages):
         self._authenticate(username, password)
         self._username = username
+        self._password = password
         self._p_messages = messages
 
     ##################################################
@@ -55,7 +58,7 @@ class Interact:
     ##################################################
     def show(self):
         id_ = self._prompt_for_id("display")
-        if not self._p_messages.show(id_):
+        if not self._p_messages.show(id_, self._authenticate(self._username, self._password)):
             print(f"ERROR! Message ID \'{id_}\' does not exist")
         print()
 
@@ -65,7 +68,7 @@ class Interact:
     ################################################## 
     def display(self):
         print("Messages:")
-        self._p_messages.display()
+        self._p_messages.display(self._authenticate(self._username, self._password))
         print()
 
     ##################################################
@@ -75,7 +78,8 @@ class Interact:
     def add(self):
         self._p_messages.add(self._prompt_for_line("message"),
                              self._username,
-                             self._prompt_for_line("date"))
+                             self._prompt_for_line("date"),
+                             self._authenticate(self._username, self._password))
 
     ##################################################
     # INTERACT :: UPDATE
@@ -83,10 +87,10 @@ class Interact:
     ################################################## 
     def update(self):
         id_ = self._prompt_for_id("update")
-        if not self._p_messages.show(id_):
+        if not self._p_messages.show(id_, self._authenticate(self._username, self._password)):
             print(f"ERROR! Message ID \'{id_}\' does not exist\n")
             return
-        self._p_messages.update(id_, self._prompt_for_line("message"))
+        self._p_messages.update(id_, self._authenticate(self._username, self._password), self._prompt_for_line("message"))
         print()
             
     ##################################################
@@ -94,7 +98,7 @@ class Interact:
     # Remove one message from the list
     ################################################## 
     def remove(self):
-        self._p_messages.remove(self._prompt_for_id("delete"))
+        self._p_messages.remove(self._prompt_for_id("delete"), self._authenticate(self._username, self._password))
 
     ##################################################
     # INTERACT :: PROMPT FOR LINE
@@ -116,7 +120,11 @@ class Interact:
     ################################################## 
     def _authenticate(self, username, password):
         id_ = self._id_from_user(username)
-        return ID_INVALID != id_ and password == users[id_].password
+        
+        if ID_INVALID != id_ and password == users[id_].password:
+            return users[id_].control
+        
+        return
 
     ##################################################
     # INTERACT :: ID FROM USER
